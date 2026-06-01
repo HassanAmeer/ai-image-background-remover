@@ -1,6 +1,6 @@
 # chroma-cleanse
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/HassanAmeer/ai-image-background-remover)
 
 A production-ready React starter template deployed on Cloudflare Workers. Features a modern UI with Tailwind CSS, shadcn/ui components, and a full-stack setup with Hono API routes.
 
@@ -71,7 +71,7 @@ Deploy directly to Cloudflare Workers using Wrangler:
 bun run deploy
 ```
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/HassanAmeer/ai-image-background-remover)
 
 The deployment uses the configuration in `wrangler.jsonc` and automatically handles static assets and Worker routes.
 
