@@ -80,7 +80,7 @@ function runSetupCommands() {
     const commands = [
     "bun add react-dropzone@^14.2.3",
     "bun add react-parallax@^3.5.0",
-    "bun add @imgly/background-removal",
+    "bun add @imgly/background-removal gif-frames gif.js.optimized",
     "bun add gif-frames gif.js.optimized"
 ];
     
