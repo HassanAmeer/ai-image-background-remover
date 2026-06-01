@@ -57,9 +57,7 @@
   }
 }
 @layer components {
-  .bg-gradient-hero-cyan {
-    @apply bg-gradient-hero-cyan dark:bg-gradient-hero-cyan-dark;
-  }
+
   .text-gradient-cyan {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-cf-cyan-500 to-cf-cyan-300;
   }
