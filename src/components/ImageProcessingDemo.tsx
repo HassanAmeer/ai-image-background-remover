@@ -1,52 +1,60 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Dropzone } from '@/components/ui/dropzone';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Download, RefreshCw, X, CheckCircle2 } from 'lucide-react';
+import { Download, RefreshCw, X, CheckCircle2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { useImageStore } from '@/hooks/use-image-store';
+import { removeBackgroundFromImage } from '@/lib/image-processing';
+import { ImageComparisonSlider } from '@/components/ui/image-comparison-slider';
 export function ImageProcessingDemo() {
-  const [originalImage, setOriginalImage] = useState<string | null>(null);
-  const [processedImage, setProcessedImage] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const originalImage = useImageStore(s => s.originalImage);
+  const processedImage = useImageStore(s => s.processedImage);
+  const isProcessing = useImageStore(s => s.isProcessing);
+  const progress = useImageStore(s => s.progress);
+  const status = useImageStore(s => s.status);
+  const setOriginalImage = useImageStore(s => s.setOriginalImage);
+  const setProcessedImage = useImageStore(s => s.setProcessedImage);
+  const setIsProcessing = useImageStore(s => s.setIsProcessing);
+  const setProgress = useImageStore(s => s.setProgress);
+  const setStatus = useImageStore(s => s.setStatus);
+  const reset = useImageStore(s => s.reset);
+  const processImage = async (source: string | File) => {
+    setIsProcessing(true);
+    setProgress(0);
+    setStatus('Initializing AI...');
+    try {
+      const resultUrl = await removeBackgroundFromImage(source, (p) => {
+        setProgress(p.progress);
+        setStatus(p.status.charAt(0).toUpperCase() + p.status.slice(1) + '...');
+      });
+      setProcessedImage(resultUrl);
+      toast.success("Background removed perfectly!");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Processing failed");
+      reset();
+    } finally {
+      setIsProcessing(false);
+    }
+  };
   const handleUpload = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const result = e.target?.result as string;
       setOriginalImage(result);
-      startProcessing();
+      processImage(file);
     };
     reader.readAsDataURL(file);
   };
-  const startProcessing = () => {
-    setIsProcessing(true);
-    setProgress(0);
-    setProcessedImage(null);
-    // Mock progress interval
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          return 100;
-        }
-        return prev + 5;
-      });
-    }, 100);
-    // Mock processing delay
-    setTimeout(() => {
-      // Using a known high-quality transparent placeholder for demo
-      setProcessedImage("https://images.unsplash.com/photo-1549298916-b41d501d3772?q=80&w=2012&auto=format&fit=crop&bg=transparent");
-      setIsProcessing(false);
-      setProgress(100);
-      toast.success("Background removed successfully!");
-    }, 2500);
-  };
-  const handleClear = () => {
-    setOriginalImage(null);
-    setProcessedImage(null);
-    setIsProcessing(false);
-    setProgress(0);
+  const handleDownload = () => {
+    if (!processedImage) return;
+    const link = document.createElement('a');
+    link.href = processedImage;
+    link.download = 'chromacleanse-result.png';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
   return (
     <div className="w-full">
@@ -61,10 +69,10 @@ export function ImageProcessingDemo() {
               className="p-8 md:p-12"
             >
               <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold mb-2">Try it now</h3>
-                <p className="text-muted-foreground">Upload any image to see the magic happen instantly.</p>
+                <h3 className="text-2xl font-bold mb-2">The Studio</h3>
+                <p className="text-muted-foreground">Upload your photo to experience professional AI background removal.</p>
               </div>
-              <Dropzone onUpload={handleUpload} />
+              <Dropzone onUpload={handleUpload} disabled={isProcessing} />
             </motion.div>
           ) : (
             <motion.div
@@ -75,60 +83,63 @@ export function ImageProcessingDemo() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-cf-cyan-500 text-white flex items-center justify-center">
-                    {isProcessing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  <div className="w-10 h-10 rounded-full bg-cf-cyan-500 text-white flex items-center justify-center shadow-glow">
+                    {isProcessing ? <RefreshCw className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
                   </div>
                   <div>
-                    <h4 className="font-bold">{isProcessing ? "Processing..." : "Processing Complete"}</h4>
-                    <p className="text-xs text-muted-foreground">{isProcessing ? "Our AI is analyzing edges..." : "Ready for download"}</p>
+                    <h4 className="font-bold">{isProcessing ? "AI is working..." : "Magic Complete"}</h4>
+                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{status || (isProcessing ? "Processing" : "Ready")}</p>
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" onClick={handleClear} className="rounded-full">
+                <Button variant="ghost" size="icon" onClick={reset} className="rounded-full hover:bg-destructive/10 hover:text-destructive">
                   <X className="w-5 h-5" />
                 </Button>
               </div>
               {isProcessing && (
-                <div className="space-y-2">
-                  <Progress value={progress} className="h-2" />
-                  <p className="text-xs text-center text-muted-foreground font-medium">{progress}% Complete</p>
+                <div className="space-y-3">
+                  <Progress value={progress} className="h-2 bg-muted overflow-hidden" />
+                  <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                    <span>Analyzing Edges</span>
+                    <span>{progress}%</span>
+                  </div>
                 </div>
               )}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Original</span>
-                  <div className="aspect-video md:aspect-square rounded-2xl overflow-hidden bg-muted border border-border relative">
-                    <img src={originalImage} alt="Original" className="w-full h-full object-cover" />
+              <div className="relative">
+                {isProcessing ? (
+                  <div className="aspect-square md:aspect-video rounded-2xl bg-muted border border-dashed border-border flex flex-col items-center justify-center gap-4">
+                    <div className="relative">
+                      <div className="w-16 h-16 rounded-full border-4 border-cf-cyan-500/20 border-t-cf-cyan-500 animate-spin" />
+                      <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-cf-cyan-500 animate-pulse" />
+                    </div>
+                    <span className="text-sm font-medium text-muted-foreground">Our AI is fetching models & processing...</span>
                   </div>
-                </div>
-                <div className="space-y-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Processed</span>
-                  <div className="aspect-video md:aspect-square rounded-2xl overflow-hidden bg-muted border border-border relative flex items-center justify-center bg-[url('https://www.transparenttextures.com/patterns/checkerboard.png')] bg-repeat">
-                    {isProcessing ? (
-                      <div className="animate-pulse flex flex-col items-center gap-3">
-                        <div className="w-12 h-12 rounded-full border-4 border-cf-cyan-500/20 border-t-cf-cyan-500 animate-spin" />
-                        <span className="text-sm text-muted-foreground font-medium">Removing Background...</span>
-                      </div>
-                    ) : (
-                      <motion.img 
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        src={processedImage!} 
-                        alt="Processed" 
-                        className="w-full h-full object-contain" 
-                      />
-                    )}
-                  </div>
-                </div>
+                ) : (
+                  processedImage && originalImage && (
+                    <ImageComparisonSlider 
+                      original={originalImage} 
+                      processed={processedImage} 
+                    />
+                  )
+                )}
               </div>
-              {!isProcessing && (
+              {!isProcessing && processedImage && (
                 <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
-                  <Button size="lg" className="bg-cf-cyan-500 hover:bg-cf-cyan-500/90 text-white rounded-xl px-8 h-12 shadow-glow flex-1 sm:flex-none">
+                  <Button 
+                    size="lg" 
+                    onClick={handleDownload}
+                    className="bg-cf-cyan-500 hover:bg-cf-cyan-500/90 text-white rounded-xl px-10 h-14 shadow-glow flex-1 sm:flex-none text-lg font-bold"
+                  >
                     <Download className="mr-2 w-5 h-5" />
                     Download PNG
                   </Button>
-                  <Button size="lg" variant="outline" onClick={handleClear} className="rounded-xl px-8 h-12 flex-1 sm:flex-none">
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    onClick={reset} 
+                    className="rounded-xl px-10 h-14 flex-1 sm:flex-none border-border hover:bg-accent"
+                  >
                     <RefreshCw className="mr-2 w-5 h-5" />
-                    Upload Another
+                    Start Over
                   </Button>
                 </div>
               )}
