@@ -15,11 +15,10 @@ export async function removeBackgroundFromImage(
     output: {
       format: 'image/png',
       quality: 0.8,
-      type: 'foreground',
     },
     debug: false,
-    model: 'medium', // Balance between speed and accuracy
-    onProgress: (status: string, progress: number) => {
+    model: 'isnet', // Balance between speed and accuracy
+    progress: (status: string, progress: number) => {
       if (onProgress) {
         // status can be 'fetch', 'decode', 'compute'
         onProgress({ status, progress: Math.round(progress * 100) });
