@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Dropzone } from '@/components/ui/dropzone';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Download, RefreshCw, X, CheckCircle2, Sparkles } from 'lucide-react';
+import { Download, RefreshCw, X, CheckCircle2, Sparkles, FileVideo } from 'lucide-react';
 import { toast } from 'sonner';
 import { useImageStore } from '@/hooks/use-image-store';
 import { removeBackgroundFromImage } from '@/lib/image-processing';
@@ -14,25 +14,34 @@ export function ImageProcessingDemo() {
   const isProcessing = useImageStore(s => s.isProcessing);
   const progress = useImageStore(s => s.progress);
   const status = useImageStore(s => s.status);
+  const fileType = useImageStore(s => s.fileType);
+  const currentFrame = useImageStore(s => s.currentFrame);
+  const totalFrames = useImageStore(s => s.totalFrames);
   const setOriginalImage = useImageStore(s => s.setOriginalImage);
   const setProcessedImage = useImageStore(s => s.setProcessedImage);
   const setIsProcessing = useImageStore(s => s.setIsProcessing);
   const setProgress = useImageStore(s => s.setProgress);
   const setStatus = useImageStore(s => s.setStatus);
+  const setFileType = useImageStore(s => s.setFileType);
+  const setFrameInfo = useImageStore(s => s.setFrameInfo);
   const reset = useImageStore(s => s.reset);
-  const processImage = async (source: string | File) => {
+  const processImage = async (file: File) => {
     setIsProcessing(true);
     setProgress(0);
-    setStatus('Initializing AI...');
+    const isGif = file.type === 'image/gif';
+    setFileType(isGif ? 'gif' : 'static');
     try {
-      const resultUrl = await removeBackgroundFromImage(source, (p) => {
+      const resultUrl = await removeBackgroundFromImage(file, (p) => {
         setProgress(p.progress);
-        setStatus(p.status.charAt(0).toUpperCase() + p.status.slice(1) + '...');
+        setStatus(p.status);
+        if (p.currentFrame && p.totalFrames) {
+          setFrameInfo(p.currentFrame, p.totalFrames);
+        }
       });
       setProcessedImage(resultUrl);
-      toast.success("Background removed perfectly!");
+      toast.success(isGif ? "GIF processed successfully!" : "Background removed perfectly!");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Processing failed");
+      toast.error("Processing failed. The file might be too large or corrupted.");
       reset();
     } finally {
       setIsProcessing(false);
@@ -41,8 +50,7 @@ export function ImageProcessingDemo() {
   const handleUpload = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      const result = e.target?.result as string;
-      setOriginalImage(result);
+      setOriginalImage(e.target?.result as string);
       processImage(file);
     };
     reader.readAsDataURL(file);
@@ -51,7 +59,7 @@ export function ImageProcessingDemo() {
     if (!processedImage) return;
     const link = document.createElement('a');
     link.href = processedImage;
-    link.download = 'chromacleanse-result.png';
+    link.download = `chromacleanse-result.${fileType === 'gif' ? 'gif' : 'png'}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -61,34 +69,23 @@ export function ImageProcessingDemo() {
       <div className="bg-card border border-border shadow-soft rounded-3xl overflow-hidden">
         <AnimatePresence mode="wait">
           {!originalImage ? (
-            <motion.div
-              key="upload"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="p-8 md:p-12"
-            >
+            <motion.div key="upload" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-8 md:p-12">
               <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold mb-2">The Studio</h3>
-                <p className="text-muted-foreground">Upload your photo to experience professional AI background removal.</p>
+                <h3 className="text-2xl font-bold mb-2 text-foreground">The Studio</h3>
+                <p className="text-muted-foreground">Upload your photo or GIF to experience AI background removal.</p>
               </div>
               <Dropzone onUpload={handleUpload} disabled={isProcessing} />
             </motion.div>
           ) : (
-            <motion.div
-              key="results"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="p-4 md:p-8 space-y-8"
-            >
+            <motion.div key="results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 md:p-8 space-y-8">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-cf-cyan-500 text-white flex items-center justify-center shadow-glow">
                     {isProcessing ? <RefreshCw className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
                   </div>
                   <div>
-                    <h4 className="font-bold">{isProcessing ? "AI is working..." : "Magic Complete"}</h4>
-                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{status || (isProcessing ? "Processing" : "Ready")}</p>
+                    <h4 className="font-bold text-foreground">{isProcessing ? "AI is working..." : "Magic Complete"}</h4>
+                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{status || "Ready"}</p>
                   </div>
                 </div>
                 <Button variant="ghost" size="icon" onClick={reset} className="rounded-full hover:bg-destructive/10 hover:text-destructive">
@@ -99,7 +96,7 @@ export function ImageProcessingDemo() {
                 <div className="space-y-3">
                   <Progress value={progress} className="h-2 bg-muted overflow-hidden" />
                   <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                    <span>Analyzing Edges</span>
+                    <span>{fileType === 'gif' && totalFrames > 0 ? `Frame ${currentFrame}/${totalFrames}` : "Analyzing Pixels"}</span>
                     <span>{progress}%</span>
                   </div>
                 </div>
@@ -111,33 +108,24 @@ export function ImageProcessingDemo() {
                       <div className="w-16 h-16 rounded-full border-4 border-cf-cyan-500/20 border-t-cf-cyan-500 animate-spin" />
                       <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-cf-cyan-500 animate-pulse" />
                     </div>
-                    <span className="text-sm font-medium text-muted-foreground">Our AI is fetching models & processing...</span>
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-muted-foreground">This may take a moment for high-resolution {fileType === 'gif' ? 'GIFs' : 'images'}.</p>
+                      {fileType === 'gif' && <p className="text-xs text-muted-foreground/60 mt-1">Processing frame by frame for maximum quality.</p>}
+                    </div>
                   </div>
                 ) : (
                   processedImage && originalImage && (
-                    <ImageComparisonSlider 
-                      original={originalImage} 
-                      processed={processedImage} 
-                    />
+                    <ImageComparisonSlider original={originalImage} processed={processedImage} />
                   )
                 )}
               </div>
               {!isProcessing && processedImage && (
                 <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
-                  <Button 
-                    size="lg" 
-                    onClick={handleDownload}
-                    className="bg-cf-cyan-500 hover:bg-cf-cyan-500/90 text-white rounded-xl px-10 h-14 shadow-glow flex-1 sm:flex-none text-lg font-bold"
-                  >
+                  <Button size="lg" onClick={handleDownload} className="bg-cf-cyan-500 hover:bg-cf-cyan-500/90 text-white rounded-xl px-10 h-14 shadow-glow flex-1 sm:flex-none text-lg font-bold">
                     <Download className="mr-2 w-5 h-5" />
-                    Download PNG
+                    Download {fileType === 'gif' ? 'GIF' : 'PNG'}
                   </Button>
-                  <Button 
-                    size="lg" 
-                    variant="outline" 
-                    onClick={reset} 
-                    className="rounded-xl px-10 h-14 flex-1 sm:flex-none border-border hover:bg-accent"
-                  >
+                  <Button size="lg" variant="outline" onClick={reset} className="rounded-xl px-10 h-14 flex-1 sm:flex-none border-border hover:bg-accent">
                     <RefreshCw className="mr-2 w-5 h-5" />
                     Start Over
                   </Button>

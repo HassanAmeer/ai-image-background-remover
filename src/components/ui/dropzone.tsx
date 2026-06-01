@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, Image as ImageIcon, CloudUpload } from 'lucide-react';
+import { Upload, Image as ImageIcon, CloudUpload, FileVideo } from 'lucide-react';
 import { cn } from '@/lib/utils';
 interface DropzoneProps {
   onUpload: (file: File) => void;
@@ -18,7 +18,8 @@ export function Dropzone({ onUpload, className, disabled }: DropzoneProps) {
     accept: {
       'image/jpeg': [],
       'image/png': [],
-      'image/webp': []
+      'image/webp': [],
+      'image/gif': []
     },
     maxFiles: 1,
     disabled
@@ -28,8 +29,8 @@ export function Dropzone({ onUpload, className, disabled }: DropzoneProps) {
       {...getRootProps()}
       className={cn(
         "relative group cursor-pointer rounded-3xl border-2 border-dashed transition-all duration-300 ease-in-out py-20 px-4",
-        isDragActive 
-          ? "border-cf-cyan-500 bg-cf-cyan-500/5 scale-[1.01]" 
+        isDragActive
+          ? "border-cf-cyan-500 bg-cf-cyan-500/5 scale-[1.01]"
           : "border-border hover:border-cf-cyan-500/50 hover:bg-muted/50",
         disabled && "opacity-50 cursor-not-allowed",
         className
@@ -44,17 +45,21 @@ export function Dropzone({ onUpload, className, disabled }: DropzoneProps) {
           {isDragActive ? <CloudUpload className="w-8 h-8" /> : <Upload className="w-8 h-8" />}
         </div>
         <div className="space-y-1">
-          <p className="text-xl font-bold tracking-tight">
-            {isDragActive ? "Drop to upload" : "Select or drag your image"}
+          <p className="text-xl font-bold tracking-tight text-foreground">
+            {isDragActive ? "Drop to upload" : "Select or drag your file"}
           </p>
           <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-            JPG, PNG or WebP files supported. Max file size: 10MB.
+            JPG, PNG, WebP or <span className="text-cf-cyan-500 font-semibold underline decoration-cf-cyan-500/30">Animated GIFs</span> supported.
           </p>
         </div>
-        <div className="pt-4">
+        <div className="pt-4 flex gap-2">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-background border border-border shadow-sm text-sm font-semibold group-hover:border-cf-cyan-500/30 transition-colors">
             <ImageIcon className="w-4 h-4 text-cf-cyan-500" />
-            <span>Choose File</span>
+            <span>Image</span>
+          </div>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-background border border-border shadow-sm text-sm font-semibold group-hover:border-cf-cyan-500/30 transition-colors">
+            <FileVideo className="w-4 h-4 text-cf-cyan-500" />
+            <span>GIF</span>
           </div>
         </div>
       </div>
