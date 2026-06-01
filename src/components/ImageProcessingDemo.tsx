@@ -10,22 +10,22 @@ import { removeBackgroundFromImage } from '@/lib/image-processing';
 import { ImageComparisonSlider } from '@/components/ui/image-comparison-slider';
 export function ImageProcessingDemo() {
   const processingIdRef = useRef<number>(0);
-  const originalImage = useImageStore(s => s.originalImage);
-  const processedImage = useImageStore(s => s.processedImage);
-  const isProcessing = useImageStore(s => s.isProcessing);
-  const progress = useImageStore(s => s.progress);
-  const status = useImageStore(s => s.status);
-  const fileType = useImageStore(s => s.fileType);
-  const currentFrame = useImageStore(s => s.currentFrame);
-  const totalFrames = useImageStore(s => s.totalFrames);
-  const setOriginalImage = useImageStore(s => s.setOriginalImage);
-  const setProcessedImage = useImageStore(s => s.setProcessedImage);
-  const setIsProcessing = useImageStore(s => s.setIsProcessing);
-  const setProgress = useImageStore(s => s.setProgress);
-  const setStatus = useImageStore(s => s.setStatus);
-  const setFileType = useImageStore(s => s.setFileType);
-  const setFrameInfo = useImageStore(s => s.setFrameInfo);
-  const reset = useImageStore(s => s.reset);
+  const originalImage = useImageStore((s) => s.originalImage);
+  const processedImage = useImageStore((s) => s.processedImage);
+  const isProcessing = useImageStore((s) => s.isProcessing);
+  const progress = useImageStore((s) => s.progress);
+  const status = useImageStore((s) => s.status);
+  const fileType = useImageStore((s) => s.fileType);
+  const currentFrame = useImageStore((s) => s.currentFrame);
+  const totalFrames = useImageStore((s) => s.totalFrames);
+  const setOriginalImage = useImageStore((s) => s.setOriginalImage);
+  const setProcessedImage = useImageStore((s) => s.setProcessedImage);
+  const setIsProcessing = useImageStore((s) => s.setIsProcessing);
+  const setProgress = useImageStore((s) => s.setProgress);
+  const setStatus = useImageStore((s) => s.setStatus);
+  const setFileType = useImageStore((s) => s.setFileType);
+  const setFrameInfo = useImageStore((s) => s.setFrameInfo);
+  const reset = useImageStore((s) => s.reset);
   // Cleanup object URLs to prevent memory leaks
   useEffect(() => {
     return () => {
@@ -75,10 +75,10 @@ export function ImageProcessingDemo() {
       setOriginalImage(result);
       processImage(file);
     };
-    reader.readAsError = () => toast.error("Failed to read file.");
+    reader.onerror = () => toast.error("Failed to read file.");
     reader.readAsDataURL(file);
   };
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!processedImage) return;
     const link = document.createElement('a');
     link.href = processedImage;
@@ -89,6 +89,9 @@ export function ImageProcessingDemo() {
   };
   const handleReset = () => {
     processingIdRef.current++; // Invalidate any pending async work
+    if (processedImage && processedImage.startsWith('blob:')) {
+      URL.revokeObjectURL(processedImage);
+    }
     reset();
   };
   return (
